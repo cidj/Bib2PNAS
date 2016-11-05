@@ -1,3 +1,6 @@
+;;;; Using CLOS to parse bib file and to convert it to any reference style. Currently, only PNAS style is supported.
+
+;; Define a article class to make every cited article a instance.
 (defclass article ()
   ((abstract
     :initarg :abstract
@@ -68,6 +71,7 @@
     :initform " "
     :accessor year)))
 
+;;This function defines a PNAS style and output it
 (defun write-pnas (reference stream)
   (format stream "\\bibitem{")
   (format stream "~a" (citename (author reference) (year reference)))
@@ -85,11 +89,13 @@
   (format stream "~a" (pages reference))
   (format stream "."))
 
+; A generic function to handle styles
 (defgeneric exportstyle (reference style stream))
 (defmethod exportstyle ((reference article) style stream)
   (cond ((string= style "pnas") (write-pnas reference stream))
 	(t (error "Not defined reference!"))))
 
+;Helper functions to deal with the punctuations
 (defun string-eql (x y)
   (let ((xl (length x))
 	(yl (length y)))
@@ -129,6 +135,7 @@
           collect (string-trim "." (string-trim " " (subseq string i j)))
           while j))
 
+;Process abbreviations of journals
 (defun abr-givenname (name)
 	   (let ((a (search ". " name))
 		 (b (search "-" name)))
@@ -150,6 +157,7 @@
    (loop for i in (split-by-string " and " string)
       collect (abr-name i))))
 |#
+
 (defun nameform (string n)
   (let* ((list (split-by-string " and " string)) 
 	 (first	(abr-name (car list))))
@@ -164,7 +172,7 @@
          (first (car (split-by-string "," (car list)))))
          (concatenate 'string first year)))
   
-  
+; Parse a *.bib file and each cited paper is converted into a instance
 (defparameter *x* nil)
 (with-open-file (stream "MyCollection.bib" :direction :input)
   (when stream
@@ -193,6 +201,8 @@
 		   (progn (format t "~a" line)
 			  (error "Only articles are accepted!~%You need to delete other cites and run program once more or there are mistakes in the result."))
 		   (format t "Not defined property: ~a" line)))))))
+
+;Out put the articles in a given style (PNAS style here)
 (defparameter *x* (nreverse *x*))
 
 (with-open-file (stream "PNASstyle.txt" :direction :output :if-exists :append)
